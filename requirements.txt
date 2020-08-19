@@ -3,7 +3,4 @@ pytest
 pandas
 numpy
 xmlschema
-<<<<<<< HEAD
-=======
 pyOSPParser
->>>>>>> master
