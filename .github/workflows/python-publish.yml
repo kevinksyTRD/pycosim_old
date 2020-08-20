@@ -27,4 +27,4 @@ jobs:
         python setup.py sdist bdist_wheel
     - name: Publish distribution 📦 to Test PyPI
       run: |
-        twine upload --repository testpypi dist/* -p ${{ secrets.TESTPYPI_PASSWORD }}
+        twine upload --repository testpypi dist/* -u __token__ -p ${{ secrets.TESTPYPI_PASSWORD }}
