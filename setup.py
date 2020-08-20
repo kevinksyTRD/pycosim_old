@@ -22,7 +22,7 @@ setup(
     packages=['pycosim'],
     install_requires=[
       'pyyaml',
-      'pyOSPParse',
+      'pyOSPParser',
       'pandas',
       'numpy',
       'xmlschema'
