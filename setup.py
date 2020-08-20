@@ -1,9 +1,15 @@
 from setuptools import setup
 
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
 setup(
     name='pyCoSim',
-    version='0.1.0',
+    version='0.1.3',
     description='Python library running co-simulation using cosim-cli from Open Simulation Platform',
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/kevinksyTRD/pycosim",
     author='Kevin Koosup Yum',
     author_email='kevinkoosup.yum@sintef.no',
     license="Apache License 2.0",
@@ -16,7 +22,7 @@ setup(
     packages=['pycosim'],
     install_requires=[
       'pyyaml',
-      'pyOSPParse',
+      'pyOSPParser',
       'pandas',
       'numpy',
       'xmlschema'

@@ -1,4 +1,5 @@
-# pycosim
+# pyCoSim
+![PyCoSim](/resources/PyCoSimTitle.svg)
 
 pycosim is a package for running co-simulation using cosim-cli from [Open Simulation Project](https://open-simulation-platform.github.io/). It provides an user friendly interface for creating the simulation setups such as logging configuration, scenario, interfaces between models and initial values. 
 
