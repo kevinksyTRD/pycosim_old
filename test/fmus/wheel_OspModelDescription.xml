@@ -13,18 +13,18 @@
     <VariableGroups>
         <LinearMechanicalPort name="chassis port">
             <Force name="chassis force">
-                <Variable ref="p1.f" unit="N"/>
+                <Variable ref="p1.e" unit="N"/>
             </Force>
             <LinearVelocity name="chassisVelocity">
-                <Variable ref="p1.e" unit="m/s"/>
+                <Variable ref="p1.f" unit="m/s"/>
             </LinearVelocity>
         </LinearMechanicalPort>
         <LinearMechanicalPort name="ground port">
             <Force name="ground force">
-                <Variable ref="p.f" unit="N"/>
+                <Variable ref="p.e" unit="N"/>
             </Force>
             <LinearVelocity name="ground velocity">
-                <Variable ref="p.e" unit="m/s"/>
+                <Variable ref="p.f" unit="m/s"/>
             </LinearVelocity>
         </LinearMechanicalPort>
     </VariableGroups>

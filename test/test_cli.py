@@ -3,11 +3,13 @@ import random
 
 import numpy as np
 import pandas
+import pytest
 from pyOSPParser.logging_configuration import OspLoggingConfiguration
 from pyOSPParser.scenario import OSPScenario, OSPEvent
 
-from pycosim.osp_command_line_interface import get_model_description, run_single_fmu, ModelVariables, run_cosimulation, \
-    LoggingLevel
+from pycosim.osp_command_line_interface import get_model_description, run_single_fmu, \
+    ModelVariables, run_cosimulation, \
+    LoggingLevel, SimulationError
 
 path_to_fmu = os.path.join(
     os.path.dirname(os.path.abspath(__file__)),
@@ -45,7 +47,7 @@ def test_get_model_description():
 
 
 def test_run_single_fmu():
-    result, log = run_single_fmu(path_to_fmu)
+    result, _ = run_single_fmu(path_to_fmu)
 
     # Check if the output file does not exist if the output_file_path is not given
     assert not os.path.isfile('model-output.csv')
@@ -80,7 +82,7 @@ def test_run_single_fmu():
     # step size is 0.01 by default.
     duration = np.round(random.random() * 10, 2)
     result, _ = run_single_fmu(path_to_fmu, duration=duration)
-    assert result['Time'].values[-1] == duration
+    assert result['Time'].values[-1] == pytest.approx(duration, rel=1e-3)
 
     # Check if the step size arg is effective
     step_size = 0.05
@@ -91,23 +93,23 @@ def test_run_single_fmu():
 
 def test_run_cosimulation():
     duration = random.randint(5, 10)
-    result, log = run_cosimulation(
+    result, log, error = run_cosimulation(
         path_to_system_structure=path_to_system_structure,
         duration=duration,
         logging_level=LoggingLevel.info,
         logging_stream=True
     )
     for each in result:
-        assert type(result[each]) is pandas.DataFrame
+        assert isinstance(result[each], pandas.DataFrame)
         assert result[each]['Time'].values[-1] == duration
-    assert type(log) is str
+    assert isinstance(log, str)
     assert len(log) > 0
 
     # Test with logging configuration and output directory
     path_to_sim_temp = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'sim_temp')
     path_to_logging_config = os.path.join(path_to_sim_temp, 'LogConfig.xml')
     logging_config = OspLoggingConfiguration(xml_source=path_to_logging_config)
-    result, log = run_cosimulation(
+    result, log, error = run_cosimulation(
         path_to_system_structure=path_to_system_structure,
         output_file_path=path_to_sim_temp,
         logging_config=logging_config,
@@ -141,13 +143,15 @@ def test_run_cosimulation():
     scenario.add_event(
         OSPEvent(time=45, model=model, variable=variable, action=OSPEvent.OVERRIDE, value=800)
     )
-    result, log = run_cosimulation(
+    result, log, error = run_cosimulation(
         path_to_system_structure=path_to_system_structure,
         duration=duration,
         scenario=scenario,
         logging_level=LoggingLevel.info,
         logging_stream=True
     )
+    if len(error) > 0:
+        raise SimulationError(f'An error or errors occured during the simulation: {error}')
     print(log)
     os.remove(os.path.join(path_to_system_structure, scenario.get_file_name()))
 

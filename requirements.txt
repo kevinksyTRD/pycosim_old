@@ -4,3 +4,7 @@ pandas
 numpy
 xmlschema
 pyOSPParser
+jupyter
+scipy
+matplotlib
+pylint
