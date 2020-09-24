@@ -37,7 +37,7 @@ PATH_TO_COSIM = os.path.join(
 
 
 class SimulationError(Exception):
-    pass
+    """Exception for simulation error"""
 
 
 class ModelVariables(NamedTuple):
@@ -93,6 +93,7 @@ class FMUModelDescription(NamedTuple):
 
 
 class LoggingLevel(Enum):
+    """Enum for logging level"""
     error = 40
     warning = 30
     info = 20
@@ -104,7 +105,7 @@ def parse_model_variables(variables: List[Dict[str, str]]) -> ModelVariables:
 
     Args:
         variables (List[Dict[str, str]]): The variable from cosim-cli inspect
-    
+
     Returns:
         ModelVariables: Variables sorted into parameter, input, output, others
     """
@@ -150,11 +151,16 @@ def get_model_description(file_path_fmu: str) -> FMUModelDescription:
     result = ''
     error = ''
     try:
-        with Popen(args=[PATH_TO_COSIM, mode, file_path_fmu], shell=True, stdout=PIPE, stderr=PIPE) as proc:
+        with Popen(
+                args=[PATH_TO_COSIM, mode, file_path_fmu],
+                shell=True,
+                stdout=PIPE,
+                stderr=PIPE
+        ) as proc:
             result = proc.stdout.read()
             error = proc.stderr.read()
-    except OSError as e:
-        raise OSError('%s, %s, %s', (result, error, e))
+    except OSError as exception:
+        raise OSError(f'{result}, {error}, {exception}')
 
     #: Parse yaml to dictionary
     result = yaml.BaseLoader(result).get_data()
@@ -170,16 +176,17 @@ def get_model_description(file_path_fmu: str) -> FMUModelDescription:
 
 
 def run_cli(args):
+    """Run the command line """
     try:
         with Popen(args=args, shell=True, stdout=PIPE, stderr=PIPE) as proc:
-            log = proc.stdout.read()
-            error = proc.stderr.read()
-    except OSError as e:
-        raise OSError('%s, %s, %s', (log, error, e))
+            output = proc.stdout.read()
+            log = proc.stderr.read()
+    except OSError as exception:
+        raise OSError(f'{output}, {log}, {exception}')
 
     # Catch errors
 
-    return log, error.decode('utf-8')
+    return output.decode('utf-8'), log.decode('utf-8')
 
 
 def run_single_fmu(
@@ -224,17 +231,18 @@ def run_single_fmu(
         args.append('-s%f' % step_size)
 
     #: Run the cosim to get the result in yaml format
-    log, error = run_cli(args)
+    log, _ = run_cli(args)
 
     # Parse the output
     result = pandas.read_csv(output_file_path)
     if delete_output:
         os.remove(output_file_path)
 
-    return result, log.decode('utf-8')
+    return result, log
 
 
 def deploy_output_config(output_config: OspLoggingConfiguration, path: str):
+    """Deploys a logging configiguration."""
     file_path = os.path.join(path, 'LogConfig.xml')
 
     xml_text = output_config.to_xml_str()
@@ -244,6 +252,7 @@ def deploy_output_config(output_config: OspLoggingConfiguration, path: str):
 
 
 def deploy_scenario(scenario: OSPScenario, path: str):
+    """Deploys a scenario"""
     file_path = os.path.join(path, scenario.get_file_name())
 
     with open(file_path, 'w+') as file:
@@ -253,10 +262,10 @@ def deploy_scenario(scenario: OSPScenario, path: str):
 
 
 def clean_header(header: str):
+    """Clean header for simulation outputs"""
     if '[' in header:
         return header[0:header.rindex('[')-1]
-    else:
-        return header
+    return header
 
 
 def run_cosimulation(
@@ -268,7 +277,7 @@ def run_cosimulation(
         duration: float = None,
         logging_level: LoggingLevel = LoggingLevel.warning,
         logging_stream: bool = False
-) -> Tuple[Dict[str, pandas.DataFrame], str]:
+) -> Tuple[Dict[str, pandas.DataFrame], str, str]:
     """Runs a co-simulation
 
     Args:
@@ -286,8 +295,9 @@ def run_cosimulation(
             Otherwise, logging will be only displayed.
     Return:
         (tuple): tuple containing:
-            result(Dict[str, pandas.DataFrame]) simulation result
-            log(str) simulation logging
+            result: simulation result
+            log: simulation logging
+            error: error from simulation
     """
     # Set loggers
     logger = logging.getLogger()
@@ -319,29 +329,42 @@ def run_cosimulation(
         delete_output = True
     else:
         assert os.path.isdir(output_file_path), \
-            "The directory for the output doesn't exist: %s." % output_file_path
-        logger.info('Output csv files will be saved in the following directory: %s.' % output_file_path)
+            f"The directory for the output does not exist: {output_file_path}."
+        logger.info(
+            'Output csv files will be saved in the following directory: %s', output_file_path
+        )
     args.append('--output-dir=%s' % output_file_path)
     if scenario is not None:
         logger.info('Deploying the scenario.')
         scenario_file_path = deploy_scenario(scenario, path_to_system_structure)
         args.append('--scenario=%s' % scenario_file_path)
     if duration:
-        logger.info('Simulation will run until %f seconds.' % duration)
-        args.append('--duration=%s' % duration)
-    args.append('--log-level=%s' % logging_level.name)
+        logger.info('Simulation will run until {%s} seconds.', duration)
+        args.append(f'--duration={duration}')
+    args.append(f'--log-level={logging_level.name}')
 
     # Run simulation
     logger.info('Running simulation.')
-    log, error = run_cli(args)
-    logger.info(error)
+    _, log = run_cli(args)
+    logger.info(log)
+    error = [  # Find a error in the lines of logging and gather with a line break in between
+        line_with_break for line in log.split('\n') if line.startswith('error')
+        for line_with_break in [line, '\n']
+    ]
+    if len(error) > 1:
+        error = error[:-1]
+    error = ''.join(error)
 
     # construct result from csvs that are created within last 30 seconds
-    output_files = [file_name for file_name in os.listdir(output_file_path) if file_name.endswith('csv')]
+    output_files = [
+        file_name for file_name in os.listdir(output_file_path) if file_name.endswith('csv')
+    ]
     ago = dt.datetime.now() - dt.timedelta(seconds=30)
     output_files = [
         file_name for file_name in output_files
-        if dt.datetime.fromtimestamp(os.stat(os.path.join(output_file_path, file_name)).st_mtime) > ago
+        if dt.datetime.fromtimestamp(
+            os.stat(os.path.join(output_file_path, file_name)).st_mtime
+        ) > ago
     ]
     result = {}
     for file in output_files:
@@ -366,4 +389,4 @@ def run_cosimulation(
     else:
         log = ''
 
-    return result, log
+    return result, log, error

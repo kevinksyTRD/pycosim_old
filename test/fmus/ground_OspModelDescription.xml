@@ -13,10 +13,10 @@
     <VariableGroups>
         <LinearMechanicalPort name="linear mechanical port">
             <Force name="force">
-                <Variable ref="p.f" unit="N"/>
+                <Variable ref="p.e" unit="N"/>
             </Force>
             <LinearVelocity name="velocity">
-                <Variable ref="p.e" unit="m/s"/>
+                <Variable ref="p.f" unit="m/s"/>
             </LinearVelocity>
         </LinearMechanicalPort>
     </VariableGroups>
